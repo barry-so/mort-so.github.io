@@ -4,6 +4,12 @@ let lastHiddenTime = null;
 let timer;
 let currentStation = 0;
 let score = 0;
+let finished = false;
+
+const savedTime = localStorage.getItem("remainingTime");
+if (savedTime !== null) {
+  remainingTime = parseInt(savedTime);
+}
 
 const stations = [
   { question: "Identify this bird: Bald Eagle", answer: "bald eagle" },
@@ -61,6 +67,9 @@ function startTimer() {
 
 
 function finishTest() {
+  if (finished) return;
+  finished = true;
+
   clearInterval(timer);
 
   document.getElementById("app").innerHTML =
@@ -75,9 +84,17 @@ document.getElementById("startBtn").onclick = startTest;
 function updateTimerDisplay() {
   let min = Math.floor(remainingTime / 60);
   let sec = remainingTime % 60;
+
   document.getElementById("timer").innerText =
     `Time: ${min}:${sec.toString().padStart(2, "0")}`;
+
+  let oobMin = Math.floor(oobTime / 60);
+  let oobSec = oobTime % 60;
+
+  document.getElementById("oobTime").innerText =
+    `Out of Browser: ${oobMin}:${oobSec.toString().padStart(2, "0")}`;
 }
+
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
