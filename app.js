@@ -1,3 +1,4 @@
+console.log("DEPLOY TEST", new Date());
 let remainingTime = 300; // 5 minutes
 let oobTime = 0;
 let lastHiddenTime = null;
@@ -71,6 +72,7 @@ function startTimer() {
 async function finishTest() {
   if (finished) return;
   finished = true;
+
   clearInterval(timer);
 
   const payload = {
@@ -80,10 +82,13 @@ async function finishTest() {
     userAgent: navigator.userAgent
   };
 
-  const res = await fetch("PASTE_YOUR_WEB_APP_URL_HERE", {
+  const res = await fetch("https://script.google.com/macros/s/AKfycbwwzJ97KbgXokqunT2Iu-4Dm9nPMV1SU09WKfrnJOx-9jYgoqTmjHlufwP4k-0iUbeR8w/exec", {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(payload)
-  });
+  });  
 
   const result = await res.json();
 
