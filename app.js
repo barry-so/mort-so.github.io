@@ -1,141 +1,64 @@
-console.log("DEPLOY TEST", new Date());
-let remainingTime = 300; // 5 minutes
-let oobTime = 0;
-let lastHiddenTime = null;
-let timer;
-let currentStation = 0;
-let score = 0;
-let finished = false;
-let userAnswers = {};
-const savedOOB = localStorage.getItem("oobTime");
-if (savedOOB !== null) oobTime = parseInt(savedOOB);
+const API = "https://script.google.com/macros/s/AKfycbwF9cy3zVXRZ4zFXmuoZW9FWU5ESw8y4p1LkhKRX2sjuJ4NLF5MuJilveAf2cBoYBe-/exec";
 
+let answers = [];
+let correct = [];
 
-const savedTime = localStorage.getItem("remainingTime");
-if (savedTime !== null) {
-  remainingTime = parseInt(savedTime);
+fetch(`${API}?action=getActiveTest`)
+  .then(r => r.json())
+  .then(meta => loadTest(meta.test));
+
+function loadTest(name) {
+  fetch(`${API}?action=getTestData&name=${name}`)
+    .then(r => r.json())
+    .then(data => render(data));
 }
 
-const stations = [
-  { question: "Identify this bird: Bald Eagle", answer: "bald eagle" },
-  { question: "Identify this insect: Monarch Butterfly", answer: "monarch butterfly" },
-  { question: "Identify this reptile: Green Anole", answer: "green anole" }
-];
+function render(data) {
+  const headers = data.headers;
+  const rows = data.rows;
+  const app = document.getElementById("app");
 
-function startTest() {
-  document.getElementById("startBtn").style.display = "none";
-  document.getElementById("app").style.display = "block";
+  app.innerHTML = "";
+  answers = [];
+  correct = [];
 
-  localStorage.setItem("remainingTime", remainingTime);
-  loadStation();
-  startTimer();
+  rows.forEach((row, i) => {
+    const block = document.createElement("div");
+
+    const title = document.createElement("h3");
+    title.innerText = row[0];
+    block.appendChild(title);
+
+    const img = document.createElement("img");
+    img.src = row[4];
+    img.width = 200;
+    block.appendChild(img);
+
+    headers.slice(1, 4).forEach((h, j) => {
+      const btn = document.createElement("button");
+      btn.innerText = row[j + 1];
+      btn.onclick = () => {
+        answers[i] = j;
+        btn.style.background = "#4CAF50";
+      };
+      block.appendChild(btn);
+    });
+
+    correct.push(parseInt(row[5]));
+    app.appendChild(block);
+  });
 }
 
-function loadStation() {
-  document.getElementById("station").innerText =
-    `Station ${currentStation + 1}: ` + stations[currentStation].question;
-}
-
-async function submitAnswer() {
-  if (currentStation >= stations.length) return;
-
-  let user = document.getElementById("answer").value.toLowerCase().trim();
-  let correct = stations[currentStation].answer;
-
-  userAnswers[currentStation] = user;
-  if (user === correct) score++;
-
-  document.getElementById("answer").value = "";
-  currentStation++;
-
-  if (currentStation < stations.length) {
-    loadStation();
-  } else {
-    await finishTest();
-  }
-}
-
-
-
-function startTimer() {
-  let lastTick = Date.now();
-
- timer = setInterval(async () => {
-    let now = Date.now();
-    let delta = Math.floor((now - lastTick) / 1000);
-    lastTick = now;
-
-    remainingTime -= delta;
-    localStorage.setItem("remainingTime", remainingTime);
-
-    updateTimerDisplay();
-
-  if (remainingTime <= 0) await finishTest();
-}, 1000);
-}
-
-
-async function finishTest() {
-  if (finished) return;
-  finished = true;
-
-  clearInterval(timer);
-
-  const payload = {
-    answers: userAnswers,
-    oob: oobTime,
-    duration: 300 - remainingTime,
-    userAgent: navigator.userAgent
-  };
-
-  const res = await fetch("https://script.google.com/macros/s/AKfycbw1Y53qrfAeHUcFY7p2bhKa8CPuRIrka5eNyoLSih7RaZROYoP2lhhoRQstOx44exrW8Q/exec", {
+function submit() {
+  fetch(API, {
     method: "POST",
-    body: JSON.stringify(payload)
-  });  
-
-  const text = await res.text();
-console.log("Server response:", text);
-
-let result;
-try {
-  result = JSON.parse(text);
-} catch {
-  alert("Server error. See console.");
-  return;
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "submit",
+      answers: answers,
+      correct: correct
+    })
+  })
+  .then(r => r.json())
+  .then(res => alert("Score: " + res.score));
 }
-  document.getElementById("app").innerHTML = `
-    <h2>Finished!</h2>
-    <p>Score: ${result.score}</p>
-    <p>OOB Time: ${oobTime}s</p>
-  `;
-}
-
-
-document.getElementById("startBtn").onclick = startTest;
-
-function updateTimerDisplay() {
-  let min = Math.floor(remainingTime / 60);
-  let sec = remainingTime % 60;
-
-  document.getElementById("timer").innerText =
-    `Time: ${min}:${sec.toString().padStart(2, "0")}`;
-
-  let oobMin = Math.floor(oobTime / 60);
-  let oobSec = oobTime % 60;
-
-  document.getElementById("oobTime").innerText =
-    `Out of Browser: ${oobMin}:${oobSec.toString().padStart(2, "0")}`;
-}
-
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    lastHiddenTime = Date.now();
-  } else if (lastHiddenTime !== null) {
-    const away = Math.floor((Date.now() - lastHiddenTime) / 1000);
-    oobTime += away;
-    localStorage.setItem("oobTime", oobTime);
-    lastHiddenTime = null;
-  }
-});
-
