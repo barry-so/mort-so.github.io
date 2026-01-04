@@ -1,4 +1,4 @@
-const API = "https://script.google.com/macros/s/AKfycbwF9cy3zVXRZ4zFXmuoZW9FWU5ESw8y4p1LkhKRX2sjuJ4NLF5MuJilveAf2cBoYBe-/exec";
+const API = "https://barry-proxy.kimethan572.workers.dev";
 
 let answers = [];
 let correct = [];
